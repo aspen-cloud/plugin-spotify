@@ -6,7 +6,7 @@ const SpotifyWebApi = require("spotify-web-api-node");
 import * as fs from "fs-extra";
 import { mergeMap } from "rxjs/operators";
 import { TrackSchema } from "./TrackSchema";
-import { Spotify } from "./types";
+import { Spotify as SpotifyTypes } from "./types";
 
 const clientID = process.env.SPOTIFY_CLIENT_ID || "";
 
@@ -193,9 +193,9 @@ export function getPlaylists(): Observable<{ items: any[]; total?: number }> {
   );
 }
 
-export const resources: { [key: string]: Spotify.iResource } = {
+export const resources: { [key: string]: SpotifyTypes.iResource } = {
   tracks: {
-    name: Spotify.ResourceType.tracks,
+    name: SpotifyTypes.ResourceType.tracks,
     label: "Your saved tracks",
     scopes: ["user-library-read"],
     get: getTracks,
@@ -208,13 +208,13 @@ export const resources: { [key: string]: Spotify.iResource } = {
     get: getAlbums
   },
   playlists: {
-    name: Spotify.ResourceType.playlists,
+    name: SpotifyTypes.ResourceType.playlists,
     label: "Your playlists",
     scopes: ["playlist-read-private"],
     get: getPlaylists
   }
 };
 
-export function getResource(name: string): iResource {
+export function getResource(name: string): SpotifyTypes.iResource {
   return resources[name];
 }
