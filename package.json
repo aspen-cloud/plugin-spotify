@@ -1,5 +1,5 @@
 {
-  "name": "plugin-spotify",
+  "name": "@aspen.cloud/plugin-spotify",
   "description": "Aspen CLI plugin to fetch and store personal spotify data",
   "version": "0.0.0",
   "author": "Aspen @aspen-cloud",
