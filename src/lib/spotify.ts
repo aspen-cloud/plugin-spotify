@@ -202,7 +202,7 @@ export const resources: { [key: string]: SpotifyTypes.iResource } = {
     schema: TrackSchema
   },
   albums: {
-    name: Spotify.ResourceType.albums,
+    name: SpotifyTypes.ResourceType.albums,
     label: "Your saved albums",
     scopes: ["user-library-read"],
     get: getAlbums
