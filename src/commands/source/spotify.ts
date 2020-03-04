@@ -12,7 +12,7 @@ import { map, tap } from "rxjs/operators";
 import * as path from "path";
 import AspenDB from "@aspen.cloud/aspendb";
 import { from } from "rxjs";
-import { Spotify as SpotifyTypes } from "../../lib/types";
+import { iResource } from "../../lib/types";
 
 /**
  * Steps
@@ -74,9 +74,7 @@ export class Spotify extends Command {
       return;
     }
 
-    function getTaskForResource(
-      resource: SpotifyTypes.iResource
-    ): Listr.ListrTask {
+    function getTaskForResource(resource: iResource): Listr.ListrTask {
       return {
         title: `Downloading ${resource.label}`,
         task: async (ctx, task) => {
@@ -96,7 +94,7 @@ export class Spotify extends Command {
 
     const tasks: Listr.ListrTask[] = choice.resources
       .map((resourceName: string) => getResource(resourceName))
-      .map((resource: SpotifyTypes.iResource) => getTaskForResource(resource));
+      .map((resource: iResource) => getTaskForResource(resource));
 
     const taskRunner = new Listr(
       [

@@ -6,7 +6,7 @@ const SpotifyWebApi = require("spotify-web-api-node");
 import * as fs from "fs-extra";
 import { mergeMap } from "rxjs/operators";
 import { TrackSchema } from "./TrackSchema";
-import { Spotify as SpotifyTypes } from "./types";
+import { iResource, ResourceType } from "./types";
 
 const clientID = process.env.SPOTIFY_CLIENT_ID || "";
 
@@ -193,28 +193,28 @@ export function getPlaylists(): Observable<{ items: any[]; total?: number }> {
   );
 }
 
-export const resources: { [key: string]: SpotifyTypes.iResource } = {
+export const resources: { [key: string]: iResource } = {
   tracks: {
-    name: SpotifyTypes.ResourceType.tracks,
+    name: ResourceType.tracks,
     label: "Your saved tracks",
     scopes: ["user-library-read"],
     get: getTracks,
     schema: TrackSchema
   },
   albums: {
-    name: SpotifyTypes.ResourceType.albums,
+    name: ResourceType.albums,
     label: "Your saved albums",
     scopes: ["user-library-read"],
     get: getAlbums
   },
   playlists: {
-    name: SpotifyTypes.ResourceType.playlists,
+    name: ResourceType.playlists,
     label: "Your playlists",
     scopes: ["playlist-read-private"],
     get: getPlaylists
   }
 };
 
-export function getResource(name: string): SpotifyTypes.iResource {
+export function getResource(name: string): iResource {
   return resources[name];
 }
