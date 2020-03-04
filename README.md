@@ -15,11 +15,11 @@ Aspen CLI plugin to fetch and store personal spotify data
 # Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g plugin-spotify
+$ npm install -g @aspen.cloud/plugin-spotify
 $ oclif-example COMMAND
 running command...
 $ oclif-example (-v|--version|version)
-plugin-spotify/0.0.0 darwin-x64 node-v11.11.0
+@aspen.cloud/plugin-spotify/0.0.0 darwin-x64 node-v11.11.0
 $ oclif-example --help [COMMAND]
 USAGE
   $ oclif-example COMMAND
@@ -28,25 +28,19 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`oclif-example hello [FILE]`](#oclif-example-hello-file)
+* [`oclif-example source:spotify`](#oclif-example-sourcespotify)
 
-## `oclif-example hello [FILE]`
+## `oclif-example source:spotify`
 
-describe the command here
+Download spotify data.
 
 ```
 USAGE
-  $ oclif-example hello [FILE]
+  $ oclif-example source:spotify
 
 OPTIONS
-  -f, --force
-  -h, --help       show CLI help
-  -n, --name=name  name to print
-
-EXAMPLE
-  $ oclif-example hello
-  hello world from ./src/hello.ts!
+  -p, --preview  Lets you preview the data for the resource.
 ```
 
-_See code: [src/commands/hello.ts](https://github.com/aspen-cloud/plugin-spotify/blob/v0.0.0/src/commands/hello.ts)_
+_See code: [src/commands/source/spotify.ts](https://github.com/aspen-cloud/plugin-spotify/blob/v0.0.0/src/commands/source/spotify.ts)_
 <!-- commandsstop -->
