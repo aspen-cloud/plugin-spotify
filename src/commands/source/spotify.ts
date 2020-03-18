@@ -1,18 +1,14 @@
 import { Command, flags } from "@oclif/command";
+import http from "http";
 import cli from "cli-ux";
 import * as inquirer from "inquirer";
-import {
-  resources,
-  startAuth,
-  getResource,
-  getTracksGenerator
-} from "../../lib/spotify";
+import SpotifySource from "../../lib/spotify";
 import Listr from "listr";
 import { map, tap } from "rxjs/operators";
-import * as path from "path";
 import AspenDB from "@aspen.cloud/aspendb";
 import { from } from "rxjs";
 import { iResource } from "../../lib/types";
+import url from "url";
 
 /**
  * Steps
@@ -36,6 +32,24 @@ export class Spotify extends Command {
   async run() {
     const { args, flags } = this.parse(Spotify);
 
+    if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
+      console.error("No client credentials supplied for Spotify");
+      console.error(
+        "You must set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET enviromental variables."
+      );
+      cli.url(
+        "Spotify Developer Dashboard",
+        `https://developer.spotify.com/dashboard`
+      );
+      return;
+    }
+
+    const spotify = new SpotifySource(
+      process.env.SPOTIFY_CLIENT_ID,
+      process.env.SPOTIFY_CLIENT_SECRET,
+      "http://localhost:8111/source/spotify/callback/"
+    );
+
     const db = new AspenDB("spotify");
 
     const prompt = inquirer.createPromptModule({ output: process.stderr });
@@ -44,24 +58,22 @@ export class Spotify extends Command {
         name: "resources",
         message: "Select which resources to download",
         type: "checkbox",
-        choices: Object.entries(resources).map(([key, resource]) => ({
+        choices: Object.entries(spotify.resources).map(([key, resource]) => ({
           name: resource.name,
           value: key
         }))
       }
     ]);
 
-    const tokenPath = path.join(this.config.cacheDir, "spotify_token.json");
-
     if (flags.preview) {
-      const { authURL, waitForAuth } = await startAuth(tokenPath);
+      const { authURL, waitForAuth } = await spotify.getAuthUrl();
       if (authURL) {
         cli.open(authURL);
       }
       await waitForAuth;
 
       const output = process.stdout;
-      const getter = getTracksGenerator();
+      const getter = spotify.getTracksGenerator();
       let { value: tracks, done } = await getter.next();
       output.write(JSON.stringify(tracks));
       output.end();
@@ -93,7 +105,7 @@ export class Spotify extends Command {
     }
 
     const tasks: Listr.ListrTask[] = choice.resources
-      .map((resourceName: string) => getResource(resourceName))
+      .map((resourceName: string) => spotify.getResource(resourceName))
       .map((resource: iResource) => getTaskForResource(resource));
 
     const taskRunner = new Listr(
@@ -101,12 +113,13 @@ export class Spotify extends Command {
         {
           title: "Authorizing with Spotify",
           task: async (ctx, task) => {
-            const { authURL, waitForAuth } = await startAuth(tokenPath);
+            const authURL = spotify.getAuthUrl();
             if (authURL) {
               task.output = "Please go to " + authURL;
               cli.open(authURL);
             }
-            return waitForAuth;
+            const code = await waitForAuthCallback();
+            await spotify.setCode(code);
           }
         },
         {
@@ -120,11 +133,28 @@ export class Spotify extends Command {
     taskRunner
       .run()
       .then(async () => {
-        const docs = await db.all(true);
-        console.log(docs);
+        console.error("Successfuly downloaded.");
       })
       .catch(err => {
         console.error(err);
       });
   }
+}
+
+async function waitForAuthCallback(): Promise<string> {
+  let server: http.Server;
+  return new Promise<string>((resolve, reject) => {
+    server = http
+      .createServer(function(req: any, res: any) {
+        const queryData = url.parse(req.url, true).query;
+        const code = queryData.code as string;
+        resolve(code);
+        res.writeHead(200);
+        res.write("Successfully authorized. You can close this tab now.");
+        res.end();
+      })
+      .listen(8111);
+  }).finally(() => {
+    server.close();
+  });
 }

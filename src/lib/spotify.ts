@@ -1,131 +1,134 @@
-var http = require("http");
-const { URL } = require("url");
 import Queue from "smart-request-balancer";
 import { Observable, from } from "rxjs";
 const SpotifyWebApi = require("spotify-web-api-node");
-import * as fs from "fs-extra";
 import { mergeMap } from "rxjs/operators";
-import { TrackSchema } from "./TrackSchema";
-import { iResource, ResourceType } from "./types";
 
-const clientID = process.env.SPOTIFY_CLIENT_ID || "";
+type ResourceGetter = (options?: any) => Observable<any>;
 
-const callbackUrl = "http://localhost:8111/auth-callback/";
+type RateLimit = {
+  rate: number;
+  limit: number;
+};
 
-const spotifyApi = new SpotifyWebApi({
-  redirectUri: callbackUrl,
-  clientId: clientID
-});
+export interface iResource {
+  scopes: string[];
+  name: ResourceType;
+  label: string;
+  get: ResourceGetter;
+  rateLimit?: RateLimit;
+  options?: any;
+  schema?: {};
+}
 
-const scopes = ["user-library-read", "playlist-read-private"];
-
-export default spotifyApi;
+export enum ResourceType {
+  tracks = "tracks",
+  albums = "albums",
+  playlists = "playlists"
+}
 
 const queue = new Queue({
   rules: {
     common: {
-      rate: 3,
+      rate: 4,
       limit: 1,
       priority: 1
     }
   }
 });
 
-const TokenForwardPage = `
-    <html>
-    <head>
-    </head>
-    <body>
-    <div>Please wait...</div>
-    <script>
-        window.onload = () => {
-            const hash = window.location.hash.substring(1);
-            console.log(hash);
-            fetch("http://localhost:8111/accessToken?" + hash).then(() => {
-                document.write('<div>Succesfully authenticated. You can now close this tab.</div>');
-            })
-        }
-    </script>
-    </body>
-    </html>
-`;
-
-export function createAuthUrl({
-  clientID,
-  redirectURI,
-  scopes
-}: {
-  clientID: string;
-  redirectURI: string;
-  scopes: string[];
-}) {
-  return `https://accounts.spotify.com/authorize?client_id=${clientID}&response_type=token&redirect_uri=${encodeURI(
-    redirectURI
-  )}&scope=${encodeURI(scopes.join(" "))}`;
-}
-
-export async function startAuth(tokenPath: string) {
-  await fs.ensureFile(tokenPath);
-  try {
-    const userConfig = await fs.readJSON(tokenPath, { throws: false });
-
-    if (userConfig?.token && userConfig.expiresAt > new Date().getTime()) {
-      spotifyApi.setAccessToken(userConfig.token);
-      return {
-        waitForAuth: Promise.resolve()
-      };
-    }
-  } catch (e) {
-    console.error(e);
-  }
-  const waitForAuth = new Promise(async (resolve, reject) => {
-    const server = http
-      .createServer(function(req: any, res: any) {
-        if (req.url.includes("accessToken")) {
-          const queryData = new URL(req.url, `http://${req.headers.host}`);
-          const token = queryData.searchParams.get("access_token");
-          spotifyApi.setAccessToken(token);
-          res.writeHead(200);
-          res.end();
-          server.close();
-          return fs
-            .writeJSON(tokenPath, {
-              token,
-              expiresAt: new Date().getTime() + 3600 * 1000
-            })
-            .then(() => {
-              resolve();
-            });
-        }
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.write(TokenForwardPage);
-        res.end();
-      })
-      .listen(8111);
-  });
-
-  return {
-    authURL: createAuthUrl({ clientID, redirectURI: callbackUrl, scopes }),
-    waitForAuth
-  };
-}
-
-export async function* getTracksGenerator() {
-  const limit = 20;
-  let offset = 0;
-  const { body } = await spotifyApi.getMySavedTracks({ limit, offset });
-  let { items, next, total } = body;
-  while (next) {
-    yield items;
-    offset += limit;
-    const { body: nextBody } = await spotifyApi.getMySavedTracks({
-      limit,
-      offset
+export default class SpotifySource {
+  spotifyApi: any;
+  constructor(clientId: string, clientSecret: string, callbackUrl: string) {
+    this.spotifyApi = new SpotifyWebApi({
+      redirectUri: callbackUrl,
+      clientId,
+      clientSecret
     });
-    items = nextBody.items;
-    next = nextBody.next;
   }
-  return body.items;
+
+  static scopes = ["user-library-read", "playlist-read-private"];
+
+  getAuthUrl() {
+    return this.spotifyApi.createAuthorizeURL(
+      SpotifySource.scopes,
+      "aspen-state"
+    );
+  }
+
+  async setCode(code: string) {
+    const data = await this.spotifyApi.authorizationCodeGrant(code);
+    this.spotifyApi.setAccessToken(data.body["access_token"]);
+    this.spotifyApi.setRefreshToken(data.body["refresh_token"]);
+  }
+
+  async *getTracksGenerator() {
+    const limit = 20;
+    let offset = 0;
+    const { body } = await this.spotifyApi.getMySavedTracks({ limit, offset });
+    let { items, next, total } = body;
+    while (next) {
+      yield items;
+      offset += limit;
+      const { body: nextBody } = await this.spotifyApi.getMySavedTracks({
+        limit,
+        offset
+      });
+      items = nextBody.items;
+      next = nextBody.next;
+    }
+    return body.items;
+  }
+
+  getTracks(): Observable<{ items: any[]; total?: number }> {
+    return getAll(
+      spotifyPaginator(this.spotifyApi.getMySavedTracks.bind(this.spotifyApi))
+    );
+  }
+
+  getAlbums() {
+    return getAll(
+      spotifyPaginator(this.spotifyApi.getMySavedAlbums.bind(this.spotifyApi))
+    );
+  }
+
+  getPlaylists(): Observable<{ items: any[]; total?: number }> {
+    return from(
+      this.spotifyApi.getMe() as Promise<{ body: { id: string } }>
+    ).pipe(
+      mergeMap(({ body }) => {
+        return getAll(
+          spotifyPaginator(
+            this.spotifyApi.getUserPlaylists.bind(this.spotifyApi, body.id)
+          )
+        );
+      })
+    );
+  }
+
+  resources: { [key: string]: iResource } = {
+    tracks: {
+      name: ResourceType.tracks,
+      label: "Your saved tracks",
+      scopes: ["user-library-read"],
+      get: this.getAlbums.bind(this)
+    },
+    albums: {
+      name: ResourceType.albums,
+      label: "Your saved albums",
+      scopes: ["user-library-read"],
+      get: this.getAlbums.bind(this)
+    },
+    playlists: {
+      name: ResourceType.playlists,
+      label: "Your playlists",
+      scopes: ["playlist-read-private"],
+      get: this.getAlbums.bind(this)
+    }
+  };
+
+  getResource(name: string): iResource {
+    return this.resources[name];
+  }
 }
 
 async function queueRequest(method: Function, key: string) {
@@ -170,51 +173,7 @@ function getAll(
       for await (const items of paginator) {
         subscriber.next(items);
       }
-      subscriber.complete();
+      return subscriber.complete();
     })();
   });
-}
-
-export function getTracks(): Observable<{ items: any[]; total?: number }> {
-  return getAll(spotifyPaginator(spotifyApi.getMySavedTracks.bind(spotifyApi)));
-}
-
-const getAlbums = () => {
-  return getAll(spotifyPaginator(spotifyApi.getMySavedAlbums.bind(spotifyApi)));
-};
-
-export function getPlaylists(): Observable<{ items: any[]; total?: number }> {
-  return from(spotifyApi.getMe() as Promise<{ body: { id: string } }>).pipe(
-    mergeMap(({ body }) => {
-      return getAll(
-        spotifyPaginator(spotifyApi.getUserPlaylists.bind(spotifyApi, body.id))
-      );
-    })
-  );
-}
-
-export const resources: { [key: string]: iResource } = {
-  tracks: {
-    name: ResourceType.tracks,
-    label: "Your saved tracks",
-    scopes: ["user-library-read"],
-    get: getTracks,
-    schema: TrackSchema
-  },
-  albums: {
-    name: ResourceType.albums,
-    label: "Your saved albums",
-    scopes: ["user-library-read"],
-    get: getAlbums
-  },
-  playlists: {
-    name: ResourceType.playlists,
-    label: "Your playlists",
-    scopes: ["playlist-read-private"],
-    get: getPlaylists
-  }
-};
-
-export function getResource(name: string): iResource {
-  return resources[name];
 }

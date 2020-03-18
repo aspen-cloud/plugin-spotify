@@ -5,7 +5,7 @@
   "author": "Aspen @aspen-cloud",
   "bugs": "https://github.com/aspen-cloud/plugin-spotify/issues",
   "dependencies": {
-    "@aspen.cloud/aspendb": "^0.1.2",
+    "@aspen.cloud/aspendb": "^0.2.2",
     "@oclif/command": "^1",
     "@oclif/config": "^1",
     "@types/fs-extra": "^8.1.0",
