@@ -1,7 +1,7 @@
 {
   "name": "@aspen.cloud/plugin-spotify",
   "description": "Aspen CLI plugin to fetch and store personal spotify data",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "author": "Aspen @aspen-cloud",
   "bugs": "https://github.com/aspen-cloud/plugin-spotify/issues",
   "dependencies": {
