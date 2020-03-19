@@ -1,7 +1,7 @@
 import { expect, test } from "@oclif/test";
 
 describe("source:spotify", () => {
-  test.it("still needs tets", () => {
+  test.it("still needs tests", () => {
     expect(true).true;
   });
   // test

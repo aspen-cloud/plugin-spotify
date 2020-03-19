@@ -19,7 +19,12 @@ import url from "url";
  */
 
 export class Spotify extends Command {
-  static description = "Download spotify data.";
+  static description = "Download spotify data with Aspen.";
+
+  static examples = [
+    `$ SPOTIFY_CLIENT_ID=your-client-id SPOTIFY_CLIENT_SECRET=your-client-secret aspen source:spotify
+`
+  ];
 
   static flags = {
     preview: flags.boolean({
@@ -50,7 +55,7 @@ export class Spotify extends Command {
       "http://localhost:8111/source/spotify/callback/"
     );
 
-    const db = new AspenDB("spotify");
+    const db = new AspenDB().app("spotify");
 
     const prompt = inquirer.createPromptModule({ output: process.stderr });
     const choice = await prompt([
