@@ -8,38 +8,35 @@ Aspen CLI plugin to fetch and store personal spotify data
 [![License](https://img.shields.io/npm/l/plugin-spotify.svg)](https://github.com/aspen-cloud/plugin-spotify/blob/master/package.json)
 
 <!-- toc -->
-
-- [Usage](#usage)
-- [Commands](#commands)
-  <!-- tocstop -->
+* [plugin-spotify](#plugin-spotify)
+* [Usage](#usage)
+* [Commands](#commands)
+<!-- tocstop -->
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
 $ npm install -g @aspen.cloud/plugin-spotify
 $ oclif-example COMMAND
 running command...
 $ oclif-example (-v|--version|version)
-@aspen.cloud/plugin-spotify/0.1.0 darwin-x64 node-v11.11.0
+@aspen.cloud/plugin-spotify/0.1.1 darwin-x64 node-v11.11.0
 $ oclif-example --help [COMMAND]
 USAGE
   $ oclif-example COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
-
-- [`oclif-example source:spotify`](#oclif-example-sourcespotify)
+* [`oclif-example source:spotify`](#oclif-example-sourcespotify)
 
 ## `oclif-example source:spotify`
 
-Download spotify data.
+Download spotify data with Aspen.
 
 ```
 USAGE
@@ -47,8 +44,10 @@ USAGE
 
 OPTIONS
   -p, --preview  Lets you preview the data for the resource.
+
+EXAMPLE
+  $ SPOTIFY_CLIENT_ID=your-client-id SPOTIFY_CLIENT_SECRET=your-client-secret aspen source:spotify
 ```
 
-_See code: [src/commands/source/spotify.ts](https://github.com/aspen-cloud/plugin-spotify/blob/v0.1.0/src/commands/source/spotify.ts)_
-
+_See code: [src/commands/source/spotify.ts](https://github.com/aspen-cloud/plugin-spotify/blob/v0.1.1/src/commands/source/spotify.ts)_
 <!-- commandsstop -->
