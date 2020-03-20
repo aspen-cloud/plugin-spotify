@@ -110,7 +110,7 @@ export default class SpotifySource {
       name: ResourceType.tracks,
       label: "Your saved tracks",
       scopes: ["user-library-read"],
-      get: this.getAlbums.bind(this)
+      get: this.getTracks.bind(this)
     },
     albums: {
       name: ResourceType.albums,
@@ -122,7 +122,7 @@ export default class SpotifySource {
       name: ResourceType.playlists,
       label: "Your playlists",
       scopes: ["playlist-read-private"],
-      get: this.getAlbums.bind(this)
+      get: this.getPlaylists.bind(this)
     }
   };
 
